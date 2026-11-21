@@ -1,0 +1,15 @@
+{
+  "name": "名冊檢查清單",
+  "short_name": "名冊檢查",
+  "description": "Apps Script PortalUsers 名冊與登入設定的檢查清單",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f5f7f6",
+  "theme_color": "#1f5f4a",
+  "lang": "zh-Hant",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

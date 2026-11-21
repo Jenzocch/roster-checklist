@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1f5f4a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="名冊檢查">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<title>名冊檢查清單</title>
+<style>
+  :root { --brand:#1f5f4a; --bg:#f5f7f6; --card:#fff; --text:#1d2a25; --muted:#5d6b66; --line:#dbe3df; --done:#e6f3ee; }
+  * { box-sizing: border-box; }
+  html, body { margin:0; background:var(--bg); color:var(--text); font-family: system-ui, -apple-system, "Segoe UI", "Noto Sans TC", sans-serif; -webkit-text-size-adjust:100%; }
+  header { position:sticky; top:0; z-index:5; background:var(--brand); color:#fff; padding:calc(12px + env(safe-area-inset-top)) 16px 12px; }
+  header h1 { font-size:18px; margin:0 0 6px; }
+  .progress { font-size:14px; opacity:.95; }
+  .bar { height:6px; background:rgba(255,255,255,.3); border-radius:4px; margin-top:8px; overflow:hidden; }
+  .bar > div { height:100%; width:0; background:#fff; transition:width .2s; }
+  main { padding:12px 12px calc(96px + env(safe-area-inset-bottom)); max-width:720px; margin:0 auto; }
+  details { background:var(--card); border:1px solid var(--line); border-radius:12px; margin-bottom:12px; overflow:hidden; }
+  summary { list-style:none; cursor:pointer; padding:14px 16px; font-weight:600; font-size:16px; display:flex; justify-content:space-between; gap:8px; }
+  summary::-webkit-details-marker { display:none; }
+  summary .count { font-weight:500; color:var(--muted); font-size:14px; white-space:nowrap; }
+  .items { padding:0 12px 12px; }
+  label.item { display:flex; gap:12px; align-items:flex-start; padding:12px 8px; border-top:1px solid var(--line); font-size:15px; line-height:1.5; border-radius:8px; }
+  label.item:has(input:checked) { background:var(--done); }
+  label.item input { width:22px; height:22px; margin:2px 0 0; flex:0 0 22px; accent-color:var(--brand); }
+  .hint { color:var(--muted); font-size:13px; margin-top:4px; }
+  code { background:#eef3f0; padding:1px 5px; border-radius:4px; font-size:13px; word-break:break-all; }
+  .table-wrap { overflow-x:auto; margin:8px 0 0; }
+  table { border-collapse:collapse; width:100%; font-size:14px; }
+  th, td { border:1px solid var(--line); padding:8px; text-align:left; vertical-align:top; }
+  th { background:#eef3f0; }
+  footer { position:fixed; left:0; right:0; bottom:0; background:var(--card); border-top:1px solid var(--line); padding:10px 12px calc(10px + env(safe-area-inset-bottom)); display:flex; gap:10px; justify-content:center; }
+  button { font:inherit; border:0; border-radius:10px; padding:12px 18px; font-size:15px; min-height:44px; cursor:pointer; }
+  #reset { background:#eef3f0; color:var(--text); }
+  #share { background:var(--brand); color:#fff; }
+  .note { font-size:13px; color:var(--muted); margin:14px 4px 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Apps Script 名冊檢查清單</h1>
+  <div class="progress" id="progress">0 / 0 已完成</div>
+  <div class="bar"><div id="bar"></div></div>
+</header>
+
+<main>
+  <details open data-section="1">
+    <summary>一、試算表與分頁 <span class="count" data-count></span></summary>
+    <div class="items">
+      <label class="item"><input type="checkbox" data-id="1-1"><span>打開綁定 Apps Script 的 Library 試算表，確認有 <code>PortalUsers</code> 分頁。沒有的話，執行 <code>PortalAuth.gs</code> 的初始化函式建立分頁與標題列。</span></label>
+      <label class="item"><input type="checkbox" data-id="1-2"><span>同一份試算表有 <code>PortalAccessLog</code> 分頁。缺少就會拒絕登入。</span></label>
+    </div>
+  </details>
+
+  <details open data-section="2">
+    <summary>二、標題列（第 1 列） <span class="count" data-count></span></summary>
+    <div class="items">
+      <label class="item"><input type="checkbox" data-id="2-1"><span>欄名完全一致、不重複，共 7 欄，順序可以不同：<code>email</code>、<code>responsible_name</code>、<code>position</code>、<code>role</code>、<code>enabled</code>、<code>google_sub</code>、<code>session_version</code></span></label>
+    </div>
+  </details>
+
+  <details open data-section="3">
+    <summary>三、每位使用者一列 <span class="count" data-count></span></summary>
+    <div class="items">
+      <label class="item"><input type="checkbox" data-id="3-1"><span><code>email</code>：Google 帳號，全小寫，<b>同一個 email 只能出現一次</b>（重複會被拒絕）。</span></label>
+      <label class="item"><input type="checkbox" data-id="3-2"><span><code>responsible_name</code>：不能空白。</span></label>
+      <label class="item"><input type="checkbox" data-id="3-3"><span><code>position</code>：不能空白。</span></label>
+      <label class="item"><input type="checkbox" data-id="3-4"><span><code>role</code>：只能是 <code>viewer</code>、<code>editor</code>、<code>approver</code>、<code>admin</code> 其中之一。</span></label>
+      <label class="item"><input type="checkbox" data-id="3-5"><span><code>enabled</code>：文字 <code>TRUE</code>。填 <code>FALSE</code> 或留空都會被拒絕。</span></label>
+      <label class="item"><input type="checkbox" data-id="3-6"><span><code>google_sub</code>：<b>先留空</b>。第一次登入成功會自動寫入，手動填會把帳號鎖死。</span></label>
+      <label class="item"><input type="checkbox" data-id="3-7"><span><code>session_version</code>：純數字，例如 <code>1</code>。要強制重新驗證時加 1。</span></label>
+    </div>
+  </details>
+
+  <details open data-section="4">
+    <summary>四、登入後自動變動（確認即可） <span class="count" data-count></span></summary>
+    <div class="items">
+      <label class="item"><input type="checkbox" data-id="4-1"><span>第一次登入成功後，<code>google_sub</code> 出現一串數字，<code>PortalAccessLog</code> 多一列 <code>login</code>。</span></label>
+      <label class="item"><input type="checkbox" data-id="4-2"><span>換了 Google 帳號或重建了列，要清空 <code>google_sub</code> 才能重新綁定。</span></label>
+    </div>
+  </details>
+
+  <details open data-section="5">
+    <summary>五、部署與共用密鑰 <span class="count" data-count></span></summary>
+    <div class="items">
+      <label class="item"><input type="checkbox" data-id="5-1"><span>Apps Script 以「網路應用程式」部署，網址為 <code>https://script.google.com/macros/s/…/exec</code>，與 Vercel 的 <code>APPS_SCRIPT_URL</code> 完全相同。</span></label>
+      <label class="item"><input type="checkbox" data-id="5-2"><span>Apps Script「指令碼屬性」有 <code>PORTAL_GATEWAY_SECRET</code>，至少 32 字元。</span></label>
+      <label class="item"><input type="checkbox" data-id="5-3"><span>Vercel 的 <code>PORTAL_GATEWAY_SECRET</code> 與 Apps Script 那邊<b>完全一致</b>。</span></label>
+      <label class="item"><input type="checkbox" data-id="5-4"><span><code>PORTAL_SESSION_SECRET</code> 也至少 32 字元。</span></label>
+    </div>
+  </details>
+
+  <details data-section="6">
+    <summary>六、Google 顯示 access_denied <span class="count" data-count></span></summary>
+    <div class="items">
+      <label class="item"><input type="checkbox" data-id="6-1"><span>確認用的是名冊那列的同一個 Google 帳號。</span></label>
+      <label class="item"><input type="checkbox" data-id="6-2"><span>若仍顯示 <code>access_denied</code>，檢查 Google Cloud 的 OAuth 同意畫面是否為「測試」模式，且帳號已加入「測試使用者」。<div class="hint">本專案尚未查證，以實際畫面為準。</div></span></label>
+    </div>
+  </details>
+
+  <details data-section="7">
+    <summary>七、快速排查 <span class="count"></span></summary>
+    <div class="items">
+      <div class="table-wrap">
+        <table>
+          <tr><th>症狀</th><th>優先檢查</th></tr>
+          <tr><td>登入後被踢回首頁</td><td><code>enabled</code> 是否 TRUE、<code>role</code> 拼字、<code>PortalAccessLog</code> 是否存在</td></tr>
+          <tr><td>時好時壞</td><td>名冊是否有重複 email</td></tr>
+          <tr><td>改 role 沒生效</td><td><code>session_version</code> 加 1，重新登入</td></tr>
+          <tr><td>換帳號一直被拒絕</td><td><code>google_sub</code> 還留舊值，要清空</td></tr>
+          <tr><td><code>service_unavailable</code></td><td>兩邊 <code>PORTAL_GATEWAY_SECRET</code> 是否一致、<code>APPS_SCRIPT_URL</code> 是否正確</td></tr>
+        </table>
+      </div>
+    </div>
+  </details>
+
+  <p class="note">進度會存在這台手機的瀏覽器裡，不會上傳。換手機或清除網站資料會消失。</p>
+</main>
+
+<footer>
+  <button id="reset" type="button">重設進度</button>
+  <button id="share" type="button">分享進度</button>
+</footer>
+
+<script>
+(function () {
+  var KEY = 'roster-checklist-v1';
+  var boxes = Array.prototype.slice.call(document.querySelectorAll('input[type=checkbox][data-id]'));
+
+  function load() {
+    try { return JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) { return {}; }
+  }
+  function save(state) {
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* 私密模式等情況下略過 */ }
+  }
+  function render() {
+    var done = boxes.filter(function (b) { return b.checked; }).length;
+    var total = boxes.length;
+    document.getElementById('progress').textContent = done + ' / ' + total + ' 已完成';
+    document.getElementById('bar').style.width = total ? (done / total * 100) + '%' : '0';
+    document.querySelectorAll('details[data-section]').forEach(function (d) {
+      var inputs = d.querySelectorAll('input[type=checkbox]');
+      var n = Array.prototype.filter.call(inputs, function (i) { return i.checked; }).length;
+      var c = d.querySelector('[data-count]');
+      if (c) c.textContent = n + ' / ' + inputs.length;
+    });
+  }
+
+  var state = load();
+  boxes.forEach(function (b) {
+    b.checked = !!state[b.dataset.id];
+    b.addEventListener('change', function () {
+      state[b.dataset.id] = b.checked;
+      save(state);
+      render();
+    });
+  });
+  render();
+
+  document.getElementById('reset').addEventListener('click', function () {
+    if (!confirm('確定要清除所有勾選的進度嗎？')) return;
+    state = {};
+    save(state);
+    boxes.forEach(function (b) { b.checked = false; });
+    render();
+  });
+
+  document.getElementById('share').addEventListener('click', function () {
+    var done = boxes.filter(function (b) { return b.checked; }).length;
+    var text = '名冊檢查進度：' + done + ' / ' + boxes.length + ' 已完成';
+    if (navigator.share) {
+      navigator.share({ title: '名冊檢查清單', text: text }).catch(function () {});
+    } else if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(function () { alert('已複製：' + text); });
+    } else {
+      alert(text);
+    }
+  });
+
+  if ('serviceWorker' in navigator && location.protocol === 'https:') {
+    navigator.serviceWorker.register('sw.js').catch(function () {});
+  }
+})();
+</script>
+</body>
+</html>
